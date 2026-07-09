@@ -166,18 +166,31 @@ var BNAV={
   viewer:[['home','fa-house','Summary'],['jobs','fa-clipboard-list','Jobs'],['invoices','fa-file-invoice','Revenue'],['reports','fa-chart-bar','Reports']]
 };
 
+// function _buildNav(){
+//   var role=_U?_U.role:'viewer';
+//   var items=NAV[role]||NAV.viewer,bnavs=BNAV[role]||BNAV.viewer;
+//   var sbEl=document.getElementById('sbNav'),bnEl=document.getElementById('bnav');
+//   if(sbEl) sbEl.innerHTML=items.map(function(it){
+//     if(it.g)return '<div class="nav-grp">'+it.g+'</div>';
+//     return '<div class="nav-item" id="sni_'+it.id+'" onclick="_lv(''+it.id+'');_sbClose()"><i class="fa-solid '+it.ic+'"></i>'+it.lb+'</div>';
+//   }).join('');
+//   if(bnEl) bnEl.innerHTML=bnavs.map(function(it){
+//     return '<div class="bn-item" id="bni_'+it[0]+'" onclick="_lv(''+it[0]+'')"><i class="fa-solid '+it[1]+'"></i>'+it[2]+'</div>';
+//   }).join('');
+// }
 function _buildNav(){
   var role=_U?_U.role:'viewer';
   var items=NAV[role]||NAV.viewer,bnavs=BNAV[role]||BNAV.viewer;
   var sbEl=document.getElementById('sbNav'),bnEl=document.getElementById('bnav');
   if(sbEl) sbEl.innerHTML=items.map(function(it){
     if(it.g)return '<div class="nav-grp">'+it.g+'</div>';
-    return '<div class="nav-item" id="sni_'+it.id+'" onclick="_lv(''+it.id+'');_sbClose()"><i class="fa-solid '+it.ic+'"></i>'+it.lb+'</div>';
+    return '<div class="nav-item" id="sni_'+it.id+'" onclick="_lv(\''+it.id+'\');_sbClose()"><i class="fa-solid '+it.ic+'"></i>'+it.lb+'</div>';
   }).join('');
   if(bnEl) bnEl.innerHTML=bnavs.map(function(it){
-    return '<div class="bn-item" id="bni_'+it[0]+'" onclick="_lv(''+it[0]+'')"><i class="fa-solid '+it[1]+'"></i>'+it[2]+'</div>';
+    return '<div class="bn-item" id="bni_'+it[0]+'" onclick="_lv(\''+it[0]+'\')"><i class="fa-solid '+it[1]+'"></i>'+it[2]+'</div>';
   }).join('');
 }
+
 function _setAct(v){
   document.querySelectorAll('.nav-item').forEach(function(e){e.classList.remove('on');});
   document.querySelectorAll('.bn-item').forEach(function(e){e.classList.remove('on');});
