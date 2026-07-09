@@ -4,7 +4,7 @@
    Replace GAS_URL with your deployed Apps Script URL
 ═══════════════════════════════════════════════════════════ */
 
-var GAS_URL = 'YOUR_GAS_DEPLOYMENT_URL_HERE';
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbwJ7Eex3dmQKJAcJetypTCFCX4SHX_urK6SFJ7YTOmbRGF6IpzIGDWNaPTkb0-9sVqgVQ/exec';
 var LS_KEY  = 'nm_press_v1';
 
 /* ── State ───────────────────────────────────────────── */
