@@ -76,8 +76,8 @@ html,body{height:100%;font-family:'Google Sans',Roboto,system-ui,-apple-system,s
 .login-err{color:var(--R);font-size:13px;text-align:center;min-height:18px;margin-top:8px;font-weight:500;}
 
 /* ── APP SHELL ────────────────────────────────────── */
-#appShell{display:none;position:fixed;inset:0;}
-#appShell.on{display:block;}
+#appShell{display:none;position:fixed;inset:0;overflow:hidden;}
+#appShell.on{display:block !important;visibility:visible !important;}
 
 /* Topbar */
 #topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);
@@ -147,8 +147,8 @@ html,body{height:100%;font-family:'Google Sans',Roboto,system-ui,-apple-system,s
 
 /* Content */
 #content{position:fixed;top:var(--topbar-h);left:0;right:0;
-  bottom:var(--bnav-h);overflow-y:auto;-webkit-overflow-scrolling:touch;
-  padding:14px 12px 8px;background:var(--bg);}
+  bottom:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:14px 12px calc(var(--bnav-h) + 8px);background:var(--bg);}
 
 /* ── CARDS ────────────────────────────────────────── */
 .card{background:var(--sur);border:1px solid var(--bdr);
@@ -410,7 +410,7 @@ tr:active td,.tr-click:hover td{background:var(--sur2);}
     box-shadow:none;border-right:1px solid var(--bdr);}
   #sbOv{display:none !important;}
   .tb-btn.menu-btn{display:none !important;}
-  #content{left:var(--sbw);padding:20px 24px;bottom:0;}
+  #content{left:var(--sbw);padding:20px 24px;bottom:0 !important;}
   #topbar{left:var(--sbw);}
   .kpi-row{grid-template-columns:repeat(4,1fr);gap:14px;}
   .home-grid{grid-template-columns:repeat(3,1fr);gap:14px;}
