@@ -1,11 +1,12 @@
 
 
+
 /* NM Press app.js v3.1 — Premium Mobile UI */
 'use strict';
 var GAS_URL='https://script.google.com/macros/s/AKfycbwyoea7hhlN3feL6ydKND1SoTDiNgsWhstImhV1jgw5c1o0YBoUYyLKODVkmmS1ATw1-g/exec';
 var LS_KEY='nm_press_v3';
 var _U=null,_TOKEN=null,_D={},_V='home',_cbIdx=0,_fabCb=null;
-var _jFilter='all',_jSearch='';
+var _jFilter='all',_jSearch='',_jobViewMode='tbl';
 
 function _gasOk(){return GAS_URL&&GAS_URL.indexOf('YOUR_GAS')===-1&&GAS_URL.startsWith('https://');}
 
@@ -106,6 +107,7 @@ function _boot(){
   if(sl)sl.style.display='none';
   if(sh){sh.style.display='block';sh.classList.add('on');}
   _elSet('sbAvatar',(_U.name||'?')[0].toUpperCase());
+  _elSet('tbAvatar',(_U.name||'?')[0].toUpperCase());
   _elSet('sbName',_U.name||'--');
   _elSet('sbRole',_rl(_U.role));
   _elSet('tbRole',_rl(_U.role));
@@ -313,7 +315,11 @@ function _showSkel(){
     +'<div class="sk" style="height:88px;border-radius:16px;margin-bottom:10px"></div>'
     +'<div class="sk" style="height:88px;border-radius:16px"></div>');
 }
-function _html(h){_el('content',function(c){c.innerHTML=h;});}
+function _html(h){
+  var ci=document.getElementById('contentInner');
+  var c=document.getElementById('content');
+  if(ci){ci.innerHTML=h;}else if(c){c.innerHTML=h;}
+}
 
 /* ════ VIEWS ════════════════════════════ */
 
@@ -360,18 +366,49 @@ function _vHome(){
   var machs=['Machine 1','Machine 2','Machine 3'];
   var mCnts=machs.map(function(m){return jobs.filter(function(j){return j['Machine Assigned']===m;}).length;});
   var mMax=Math.max.apply(null,mCnts)||1;
-  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">';
-  html+='<div class="card"><div class="card-head"><div class="card-title"><i class="fa-solid fa-chart-pie"></i>Status</div></div><div class="card-body"><div class="donut-wrap"><div class="donut" style="background:conic-gradient('+cParts.join(',')+')" ></div><div class="donut-legend">'+stK.map(function(k,i){return '<div class="donut-row"><div class="donut-dot" style="background:'+stC[i]+'"></div><span style="flex:1">'+k.replace('Done - Dispatch Pending','Dispatch')+'</span><b>'+stMap[k]+'</b></div>';}).join('')+'</div></div></div></div>';
-  html+='<div class="card"><div class="card-head"><div class="card-title"><i class="fa-solid fa-gears"></i>Machines</div></div><div class="card-body"><div class="chart-bar-group">';
-  machs.forEach(function(m,i){var pct=(mCnts[i]/mMax*100).toFixed(0);html+='<div class="chart-bar-row"><span class="chart-bar-lbl">M'+(i+1)+'</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:'+pct+'%;background:'+['#4285F4','#34A853','#EA4335'][i]+'"></div></div><span class="chart-bar-val">'+mCnts[i]+'</span></div>';});
-  html+='</div></div></div></div>';
-  html+='<div class="kpi-row">'+_kpi('Month Revenue','&#8377;'+_f(monthRev),'fa-indian-rupee-sign','#34A853','rgba(52,168,83,.1)')+_kpi('Outstanding','&#8377;'+_f(outstanding),'fa-hourglass-half','#EA4335','rgba(234,67,53,.1)')+'</div>';
+  /* Desktop: 2-panel layout */
+  html+='<div class="desktop-grid" style="margin-bottom:16px">';
+  /* Left: charts side by side */
+  html+='<div>';
+  html+='<div class="desktop-grid-2" style="margin-bottom:14px">';
+  html+='<div class="card"><div class="card-head"><div class="card-title"><i class="fa-solid fa-chart-pie"></i>Job Status</div></div><div class="card-body"><div class="donut-wrap"><div class="donut" style="background:conic-gradient('+cParts.join(',')+')" ></div><div class="donut-legend">'+stK.map(function(k,i){return '<div class="donut-row"><div class="donut-dot" style="background:'+stC[i]+'"></div><span style="flex:1">'+k.replace('Done - Dispatch Pending','Dispatch')+'</span><b>'+stMap[k]+'</b></div>';}).join('')+'</div></div></div></div>';
+  html+='<div class="card"><div class="card-head"><div class="card-title"><i class="fa-solid fa-gears"></i>Machine Load</div></div><div class="card-body"><div class="chart-bar-group">';
+  machs.forEach(function(m,i){var pct=(mCnts[i]/mMax*100).toFixed(0);var cnt=mCnts[i];html+='<div class="chart-bar-row"><span class="chart-bar-lbl">'+m.replace('Machine ','M')+'</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:'+pct+'%;background:'+['#4285F4','#34A853','#EA4335'][i]+'"></div></div><span class="chart-bar-val">'+cnt+'</span></div>';});
+  html+='</div></div></div>';
+  html+='</div>';/* end desktop-grid-2 */
+  html+='<div class="desktop-grid-2">';
+  html+=_kpi('Month Revenue','&#8377;'+_f(monthRev),'fa-indian-rupee-sign','#34A853','rgba(52,168,83,.1)','This month billed');
+  html+=_kpi('Outstanding','&#8377;'+_f(outstanding),'fa-hourglass-half','#EA4335','rgba(234,67,53,.1)',outstanding>0?invs.filter(function(i){return i['Status']==='Overdue';}).length+' overdue':'All clear');
+  html+='</div>';
+  html+='</div>';/* end left panel */
+  /* Right: recent activity */
+  var recent5=jobs.slice(-5).reverse();
+  html+='<div>';
+  html+='<div class="card" style="margin-bottom:0">';
+  html+='<div class="card-head"><div class="card-title"><i class="fa-solid fa-bolt"></i>Recent Activity</div><span class="card-action" onclick="_lv(\'jobs\')">View All</span></div>';
+  html+='<div style="padding:0">';
+  if(!recent5.length){html+='<div class="empty" style="padding:32px"><i class="fa-solid fa-inbox"></i><p>No jobs yet</p></div>';}
+  else recent5.forEach(function(j){
+    var acColors={1:'#EA4335',2:'#F97316',3:'#4285F4',4:'#34A853',5:'#9DA3B8'};
+    var pri=parseInt(j['Priority']||j['Priority (1-5)']||3)||3;
+    var ac=acColors[Math.min(5,Math.max(1,pri))];
+    var jrid=_esc(j['Job ID']||'');
+    var row='<div class="_act-row" onclick="_mJobDetail(\''+jrid+'\')";>';
+    row+='<div style="width:4px;height:40px;border-radius:2px;background:'+ac+';flex-shrink:0"></div>';
+    row+='<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_e(j['Job Name / Description']||'--')+'</div>';
+    row+='<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+_e(j['Job ID']||'--')+' &bull; '+_e(j['Party Name']||'--')+'</div></div>';
+    row+=_stBadge(j['Job Status']||'Pending')+'</div>';
+    html+=row;
+  });
+  html+='</div></div>';
+  html+='</div>';/* end right panel */
+  html+='</div>';/* end desktop-grid */
   if(_U.role==='admin'){
     html+='<div class="sec-head"><div class="sec-title">Quick Actions</div></div>'
       +'<div class="qa-grid">'
       +_tile('fa-plus','#4285F4','rgba(66,133,244,.1)','New Job','Add production job','_mNewJob()')
       +_tile('fa-boxes-stacked','#34A853','rgba(52,168,83,.1)','Stock In','Register inward','_mStockIn()')
-      +_tile('fa-truck','#0D9488','rgba(13,148,136,.1)','Dispatch',dispDue.length+' waiting','_lv(\'dispatch\')',dispDue.length||'')
+      +_tile('fa-truck','#0D9488','rgba(13,148,136,.1)','Dispatch',dispDue.length+' waiting','_lv(\'dispatch\')',dispDue.length>0?dispDue.length:'')
       +_tile('fa-file-invoice','#7C3AED','rgba(124,58,237,.1)','Invoices','View & create','_lv(\'invoices\')')
       +_tile('fa-chart-bar','#FBBC05','rgba(251,188,5,.12)','Analytics','Reports','_lv(\'reports\')')
       +_tile('fa-building-user','#EA4335','rgba(234,67,53,.1)','Parties','View all','_lv(\'parties\')')
@@ -444,13 +481,47 @@ function _vJobs(){
     var mr=!q||(j['Job ID']||'').toLowerCase().indexOf(q)>=0||(j['Job Name / Description']||'').toLowerCase().indexOf(q)>=0||(j['Party Name']||'').toLowerCase().indexOf(q)>=0;
     return ms&&mr;
   }).sort(function(a,b){return(_n(a['Priority']||a['Priority (1-5)'])||5)-(_n(b['Priority']||b['Priority (1-5)'])||5);});
-  html+='<div class="sec-head"><div class="sec-title">'+filtered.length+' jobs</div></div>';
+  html+='<div class="sec-head"><div class="sec-title">Jobs <span class="sec-title-count">'+filtered.length+'</span></div>'
+    +'<div style="display:flex;gap:8px"><span class="sec-link" onclick="_setJobView(\'card\')"><i class="fa-solid fa-table-cells-large"></i> Cards</span><span class="sec-link" onclick="_setJobView(\'tbl\')"><i class="fa-solid fa-table-list"></i> Table</span></div>'
+    +'</div>';
   if(!filtered.length)html+='<div class="empty"><i class="fa-solid fa-clipboard-list"></i><h3>No jobs</h3><p>No jobs match this filter</p></div>';
-  else filtered.forEach(function(j){html+=_jobCard(j,role!=='viewer');});
+  else if(_jobViewMode==='tbl'){
+    html+='<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Job ID</th><th>Description</th><th>Party</th><th>Machine</th><th>P</th><th>Cut</th><th>Print</th><th>Dispatch</th><th>Status</th><th>Due</th>'+(role!=='viewer'?'<th>Action</th>':'')+'</tr></thead><tbody>';
+    filtered.forEach(function(j){
+      var acColors={1:'#EA4335',2:'#F97316',3:'#4285F4',4:'#34A853',5:'#9DA3B8'};
+      var pri=parseInt(j['Priority']||j['Priority (1-5)']||3)||3;
+      var ac=acColors[Math.min(5,Math.max(1,pri))];
+      var jid=_esc(j['Job ID']||'');
+      var cutSt=j['Cut Status']||'Pending';var printSt=j['Print Status']||'Pending';var disSt=j['Dispatch Status']||'Pending';
+      var delayed=(j['Delay Flag']==='DELAYED'||j['Delay Flag (Formula)']==='DELAYED');
+      html+='<tr onclick="_mJobDetail(\''+jid+'\')">';
+        +'<td><div style="display:flex;align-items:center;gap:8px"><div style="width:3px;height:28px;border-radius:2px;background:'+ac+'"></div><div><b>'+_e(j['Job ID']||'--')+'</b>'+(delayed?'<span style="color:#EA4335;margin-left:4px">&#9888;</span>':'')+'</div></div></td>'
+        +'<td style="max-width:180px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600">'+_e(j['Job Name / Description']||'--')+'</div></td>'
+        +'<td>'+_e(j['Party Name']||'--')+'</td>'
+        +'<td>'+_e(j['Machine Assigned']||'--')+'</td>'
+        +'<td><span class="badge '+(pri==1?'br':pri==2?'bo':'bb')+'">P'+pri+'</span></td>'
+        +'<td><span class="badge '+_cBadge(cutSt)+'">'+cutSt+'</span></td>'
+        +'<td><span class="badge '+_pBadge(printSt)+'">'+printSt+'</span></td>'
+        +'<td><span class="badge '+(disSt==='Done'?'bg':'bx')+'">'+disSt+'</span></td>'
+        +'<td>'+_stBadge(j['Job Status']||'Pending')+'</td>'
+        +'<td style="white-space:nowrap;font-size:12px">'+_e(j['Promised Date']||'--')+'</td>';
+      if(role!=='viewer'){
+        html+='<td onclick="event.stopPropagation()" style="white-space:nowrap">';
+        if((role==='cutting'||role==='admin'||role==='supervisor')&&cutSt!=='Done')html+='<button class="btn btn-sm btnO" onclick="_mCut(\''+jid+'\'"><i class="fa-solid fa-scissors"></i></button> ';
+        if((role==='operator'||role==='admin'||role==='supervisor')&&cutSt==='Done'&&printSt!=='Done')html+='<button class="btn btn-sm btnB" onclick="_mPrint(\''+jid+'\'"><i class="fa-solid fa-print"></i></button> ';
+        if((role==='admin'||role==='supervisor')&&printSt==='Done'&&disSt==='Pending')html+='<button class="btn btn-sm btnT" onclick="_mDispatchJob(\''+jid+'\'"><i class="fa-solid fa-truck"></i></button>';
+        html+='</td>';
+      }
+      html+='</tr>';
+    });
+    html+='</tbody></table></div>';
+  } else {
+    filtered.forEach(function(j){html+=_jobCard(j,role!=='viewer');});
+  }
   _html(html);
   var s=document.getElementById('jobSearch');if(s&&_jSearch)s.value=_jSearch;
 }
-function _jFlt(f){_jFilter=f;_vJobs();}function _jSrch(v){_jSearch=v;}
+function _jFlt(f){_jFilter=f;_vJobs();}function _jSrch(v){_jSearch=v;}function _setJobView(m){_jobViewMode=m;_vJobs();}
 
 /* HISTORY */
 function _vHistory(){
@@ -626,18 +697,22 @@ function _vPayments(){
   var pays=(_D.payments||[]).slice().reverse();
   var total=pays.reduce(function(s,p){return s+_n(p['Amount Received (Rs)']);},0);
   var html='<div class="kpi-row">'+_kpi('Receipts',''+pays.length,'fa-receipt','#4285F4','rgba(66,133,244,.1)')+_kpi('Total Received','&#8377;'+_f(total),'fa-money-bill-wave','#34A853','rgba(52,168,83,.1)')+'</div>';
-  if(!pays.length)html+='<div class="empty"><i class="fa-solid fa-indian-rupee-sign"></i><h3>No payments</h3><p>Received payments appear here</p></div>';
-  else pays.forEach(function(p){
-    html+='<div class="card"><div class="card-body">'
-      +'<div class="info-row"><span class="ir-l">Pay ID</span><span class="ir-v">'+_e(p['Payment ID']||'--')+'</span></div>'
-      +'<div class="info-row"><span class="ir-l">Date</span><span class="ir-v">'+(p['Payment Date']||'--')+'</span></div>'
-      +'<div class="info-row"><span class="ir-l">Party</span><span class="ir-v">'+_e(p['Party Name']||'--')+'</span></div>'
-      +'<div class="info-row"><span class="ir-l">Invoice</span><span class="ir-v">'+_e(p['Invoice No.']||'--')+'</span></div>'
-      +'<div class="info-row"><span class="ir-l">Amount</span><span class="ir-v" style="color:#34A853;font-size:18px;font-weight:800">&#8377;'+_f(_n(p['Amount Received (Rs)']))+'</span></div>'
-      +'<div class="info-row"><span class="ir-l">Mode</span><span class="ir-v"><span class="badge bb">'+_e(p['Payment Mode']||'--')+'</span></span></div>'
-      +(p['Reference No. / UTR / Cheque No.']?'<div class="info-row"><span class="ir-l">Ref/UTR</span><span class="ir-v" style="font-size:12px">'+_e(p['Reference No. / UTR / Cheque No.'])+'</span></div>':'')
-      +'</div></div>';
-  });
+  if(!pays.length){html+='<div class="empty"><i class="fa-solid fa-indian-rupee-sign"></i><h3>No payments</h3><p>Received payments appear here</p></div>';}
+  else {
+    html+='<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Payment ID</th><th>Date</th><th>Party</th><th>Invoice</th><th>Amount</th><th>Mode</th><th>Ref / UTR</th></tr></thead><tbody>';
+    pays.forEach(function(p){
+      html+='<tr>'
+        +'<td><b>'+_e(p['Payment ID']||'--')+'</b></td>'
+        +'<td style="white-space:nowrap">'+_e(p['Payment Date']||'--')+'</td>'
+        +'<td>'+_e(p['Party Name']||'--')+'</td>'
+        +'<td>'+_e(p['Invoice No.']||'--')+'</td>'
+        +'<td style="font-weight:800;color:#34A853;font-size:14px">&#8377;'+_f(_n(p['Amount Received (Rs)']))+'</td>'
+        +'<td><span class="badge bb">'+_e(p['Payment Mode']||'--')+'</span></td>'
+        +'<td style="font-size:12px;color:var(--tx3)">'+_e(p['Reference No. / UTR / Cheque No.']||'--')+'</td>'
+        +'</tr>';
+    });
+    html+='</tbody></table></div>';
+  }
   _html(html);
 }
 
@@ -789,31 +864,41 @@ function _vReports(){
   var totalPaid=pays.reduce(function(s,p){return s+_n(p['Amount Received (Rs)']);},0);
   var passRate=qcs.length?Math.round(qcs.filter(function(q){return q['Pass/Fail']==='Pass';}).length/qcs.length*100):0;
   var html='<div class="kpi-row">'
-    +_kpi('Revenue','&#8377;'+_f(totalBill),'fa-indian-rupee-sign','#34A853','rgba(52,168,83,.1)')
-    +_kpi('Collected','&#8377;'+_f(totalPaid),'fa-circle-check','#4285F4','rgba(66,133,244,.1)')
-    +_kpi('Outstanding','&#8377;'+_f(totalBill-totalPaid),'fa-hourglass-half','#EA4335','rgba(234,67,53,.1)')
-    +_kpi('QC Pass Rate',''+passRate+'%','fa-percent','#7C3AED','rgba(124,58,237,.1)')
+    +_kpi('Revenue','&#8377;'+_f(totalBill),'fa-indian-rupee-sign','#34A853','rgba(52,168,83,.1)','Total billed')
+    +_kpi('Collected','&#8377;'+_f(totalPaid),'fa-circle-check','#4285F4','rgba(66,133,244,.1)','Payments received')
+    +_kpi('Outstanding','&#8377;'+_f(totalBill-totalPaid),'fa-hourglass-half','#EA4335','rgba(234,67,53,.1)',invs.filter(function(i){return i['Status']==='Overdue';}).length+' overdue')
+    +_kpi('QC Pass Rate',''+passRate+'%','fa-percent','#7C3AED','rgba(124,58,237,.1)',qcs.length+' inspections')
+    +'</div>';
+  html+='<div class="kpi-row">'
+    +_kpi('Total Jobs',''+jobs.length,'fa-clipboard-list','#0D9488','rgba(13,148,136,.1)',jobs.filter(function(j){return j['Job Status']==='Complete';}).length+' complete')
+    +_kpi('Expenses','&#8377;'+_f(totalExp),'fa-receipt','#F97316','rgba(249,115,22,.1)','Total spend')
+    +_kpi('Gross Profit','&#8377;'+_f(totalBill-totalExp),'fa-scale-balanced',totalBill-totalExp>=0?'#34A853':'#EA4335',totalBill-totalExp>=0?'rgba(52,168,83,.1)':'rgba(234,67,53,.1)','Revenue - Expenses')
+    +_kpi('Downtime Events',''+dts.length,'fa-triangle-exclamation','#EA4335','rgba(234,67,53,.1)','&#8377;'+_f(dts.reduce(function(s,d){return s+_n(d['Repair Cost (Rs)']);},0))+' cost')
     +'</div>';
   var machs=['Machine 1','Machine 2','Machine 3'];var mColors=['#4285F4','#34A853','#EA4335'];
   var mMax=Math.max.apply(null,machs.map(function(m){return jobs.filter(function(j){return j['Machine Assigned']===m;}).length;}))||1;
-  html+='<div class="card"><div class="card-head"><div class="card-title"><i class="fa-solid fa-gears"></i>Jobs Per Machine</div></div><div class="card-body"><div class="chart-bar-group">';
-  machs.forEach(function(m,i){var cnt=jobs.filter(function(j){return j['Machine Assigned']===m;}).length;html+='<div class="chart-bar-row"><span class="chart-bar-lbl">'+m+'</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:'+(cnt/mMax*100).toFixed(0)+'%;background:'+mColors[i]+'"></div></div><span class="chart-bar-val">'+cnt+'</span></div>';});
-  html+='</div></div></div>';
   var stMap={'Complete':0,'In Progress':0,'Pending':0,'Done - Dispatch Pending':0};
   jobs.forEach(function(j){var s=j['Job Status']||'Pending';if(stMap.hasOwnProperty(s))stMap[s]++;});
   var stC=['#34A853','#4285F4','#FBBC05','#EA4335'];var tot=jobs.length||1;var conic=[],cum=0;
   Object.keys(stMap).forEach(function(k,i){var p=stMap[k]/tot*100;conic.push(stC[i]+' '+cum.toFixed(1)+'% '+(cum+p).toFixed(1)+'%');cum+=p;});
-  html+='<div class="card"><div class="card-head"><div class="card-title"><i class="fa-solid fa-chart-pie"></i>Job Status</div></div><div class="card-body"><div class="donut-wrap"><div class="donut" style="background:conic-gradient('+conic.join(',')+')" ></div><div class="donut-legend">'+Object.keys(stMap).map(function(k,i){return '<div class="donut-row"><div class="donut-dot" style="background:'+stC[i]+'"></div><span style="flex:1">'+k+'</span><b>'+stMap[k]+'</b></div>';}).join('')+'</div></div></div></div>';
+  html+='<div class="desktop-grid-2" style="margin-bottom:14px">';
+  html+='<div class="card" style="margin-bottom:0"><div class="card-head"><div class="card-title"><i class="fa-solid fa-chart-pie"></i>Job Status</div></div><div class="card-body"><div class="donut-wrap"><div class="donut" style="background:conic-gradient('+conic.join(',')+')" ></div><div class="donut-legend">'+Object.keys(stMap).map(function(k,i){return '<div class="donut-row"><div class="donut-dot" style="background:'+stC[i]+'"></div><span style="flex:1">'+k.replace('Done - Dispatch Pending','Dispatch')+'</span><b>'+stMap[k]+'</b></div>';}).join('')+'</div></div></div></div>';
+  html+='<div class="card" style="margin-bottom:0"><div class="card-head"><div class="card-title"><i class="fa-solid fa-gears"></i>Jobs Per Machine</div></div><div class="card-body"><div class="chart-bar-group">';
+  machs.forEach(function(m,i){var cnt=jobs.filter(function(j){return j['Machine Assigned']===m;}).length;html+='<div class="chart-bar-row"><span class="chart-bar-lbl">'+m+'</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:'+(cnt/mMax*100).toFixed(0)+'%;background:'+mColors[i]+'"></div></div><span class="chart-bar-val">'+cnt+'</span></div>';});
+  html+='</div></div></div>';
+  html+='</div>';
   var pBill={};invs.forEach(function(i){var pid=i['Party Name']||'Unknown';pBill[pid]=(pBill[pid]||0)+_n(i['Final Amount']);});
   var topPts=Object.keys(pBill).sort(function(a,b){return pBill[b]-pBill[a];}).slice(0,5);
-  if(topPts.length){var pMax=pBill[topPts[0]]||1;html+='<div class="card"><div class="card-head"><div class="card-title"><i class="fa-solid fa-trophy"></i>Top Parties</div></div><div class="card-body"><div class="chart-bar-group">';topPts.forEach(function(pt){html+='<div class="chart-bar-row"><span class="chart-bar-lbl">'+_e(pt)+'</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:'+(pBill[pt]/pMax*100).toFixed(0)+'%;background:#4285F4"></div></div><span class="chart-bar-val">&#8377;'+_f(pBill[pt])+'</span></div>';});html+='</div></div></div>';}
-  html+='<div class="card"><div class="card-head"><div class="card-title"><i class="fa-solid fa-scale-balanced"></i>P&amp;L Summary</div></div><div class="card-body">'
+  html+='<div class="desktop-grid-2" style="margin-bottom:14px">';
+  html+='<div class="card" style="margin-bottom:0"><div class="card-head"><div class="card-title"><i class="fa-solid fa-scale-balanced"></i>P&amp;L Summary</div></div><div class="card-body">'
     +'<div class="info-row"><span class="ir-l">Revenue Billed</span><span class="ir-v" style="color:#34A853;font-weight:700">&#8377;'+_f(totalBill)+'</span></div>'
-    +'<div class="info-row"><span class="ir-l">Collected</span><span class="ir-v" style="color:#4285F4;font-weight:700">&#8377;'+_f(totalPaid)+'</span></div>'
+    +'<div class="info-row"><span class="ir-l">Payments Collected</span><span class="ir-v" style="color:#4285F4;font-weight:700">&#8377;'+_f(totalPaid)+'</span></div>'
     +'<div class="info-row"><span class="ir-l">Outstanding</span><span class="ir-v" style="color:#EA4335;font-weight:700">&#8377;'+_f(totalBill-totalPaid)+'</span></div>'
     +'<div class="info-row"><span class="ir-l">Total Expenses</span><span class="ir-v" style="color:#F97316;font-weight:700">&#8377;'+_f(totalExp)+'</span></div>'
-    +'<div class="info-row"><span class="ir-l">Gross Profit</span><span class="ir-v" style="color:'+(totalBill-totalExp>=0?'#34A853':'#EA4335')+';font-weight:800;font-size:15px">&#8377;'+_f(totalBill-totalExp)+'</span></div>'
+    +'<div class="info-row" style="border-bottom:none;padding-top:14px;margin-top:4px;border-top:2px solid var(--bdr)"><span class="ir-l" style="font-weight:700">Gross Profit</span><span class="ir-v" style="color:'+(totalBill-totalExp>=0?'#34A853':'#EA4335')+';font-weight:800;font-size:17px">&#8377;'+_f(totalBill-totalExp)+'</span></div>'
     +'</div></div>';
+  if(topPts.length){var pMax2=pBill[topPts[0]]||1;html+='<div class="card" style="margin-bottom:0"><div class="card-head"><div class="card-title"><i class="fa-solid fa-trophy"></i>Top Parties</div></div><div class="card-body"><div class="chart-bar-group">';topPts.forEach(function(pt){html+='<div class="chart-bar-row"><span class="chart-bar-lbl">'+_e(pt)+'</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:'+(pBill[pt]/pMax2*100).toFixed(0)+'%;background:#4285F4"></div></div><span class="chart-bar-val">&#8377;'+_f(pBill[pt])+'</span></div>';});html+='</div></div></div>';}
+  html+='</div>';
   _html(html);
 }
 
@@ -1139,15 +1224,19 @@ function _mLoad(){_el('mFoot',function(mf){mf.innerHTML='<button class="btn btnO
 function _fabClick(){if(_fabCb)_fabCb();}
 
 /* ════ COMPONENT HELPERS ═════════════════ */
-function _kpi(label,val,icon,color,bg){
+function _kpi(label,val,icon,color,bg,sub,trend){
+  var trendHtml='';
+  if(trend){var tCls=trend>0?'up':'dn';trendHtml='<div class="kpi-trend '+tCls+'">'+(trend>0?'&#9650;':'&#9660;')+' '+Math.abs(trend)+'%</div>';}
   return '<div class="kpi" style="--kc:'+color+';--kib:'+bg+'">'
-    +'<div class="kpi-ico"><i class="fa-solid '+icon+'"></i></div>'
+    +'<div class="kpi-top"><div class="kpi-ico"><i class="fa-solid '+icon+'"></i></div>'+trendHtml+'</div>'
     +'<div class="kpi-val">'+val+'</div>'
-    +'<div class="kpi-lbl">'+label+'</div></div>';
+    +'<div class="kpi-lbl">'+label+'</div>'
+    +(sub?'<div class="kpi-sub">'+sub+'</div>':'')
+    +'</div>';
 }
 function _tile(icon,color,bg,name,sub,fn,badge){
   return '<div class="qa-tile" style="--tc:'+color+';--tib:'+bg+'" onclick="'+fn+'">'
-    +(badge?'<div class="qa-badge">'+badge+'</div>':'')
+    +(badge&&badge!==''&&badge!=='0'?'<div class="qa-badge">'+badge+'</div>':'')
     +'<div class="qa-ico"><i class="fa-solid '+icon+'"></i></div>'
     +'<div class="qa-name">'+name+'</div>'
     +'<div class="qa-sub">'+sub+'</div></div>';
@@ -1195,6 +1284,23 @@ function _vSettings(){
   /* Sign out */
   html+='<div style="margin-top:8px"><button class="btn btnR btn-full" onclick="_signOut()"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</button></div>';
   _html(html);
+}
+function _mInvDetail(invNo){
+  var inv=(_D.invoices||[]).filter(function(i){return i['Invoice No.']===invNo;})[0];
+  if(!inv)return;
+  var st=inv['Status']||'Pending';var stCls=st==='Paid'?'bg':st==='Overdue'?'br':st==='Partial'?'bo':'bb';
+  var netPay=_n(inv['Net Payable (Formula)']||inv['Net Payable']);
+  var role=_U?_U.role:'viewer';
+  var body='<div style="text-align:center;padding:16px 0 20px"><div style="font-size:30px;font-weight:800;color:var(--tx)">&#8377;'+_f(_n(inv['Final Amount']))+'</div>'
+    +'<span class="badge '+stCls+'" style="margin-top:8px">'+st+'</span></div>'
+    +'<div class="info-row"><span class="ir-l">Invoice No.</span><span class="ir-v"><b>'+_e(inv['Invoice No.']||'--')+'</b></span></div>'
+    +'<div class="info-row"><span class="ir-l">Party</span><span class="ir-v">'+_e(inv['Party Name']||'--')+'</span></div>'
+    +'<div class="info-row"><span class="ir-l">Invoice Date</span><span class="ir-v">'+_e(inv['Invoice Date']||'--')+'</span></div>'
+    +'<div class="info-row"><span class="ir-l">Due Date</span><span class="ir-v" style="'+(st==='Overdue'?'color:#EA4335;font-weight:700':'')+'">'+_e(inv['Due Date']||'--')+'</span></div>'
+    +'<div class="info-row"><span class="ir-l">Net Payable</span><span class="ir-v" style="color:#4285F4;font-weight:700">&#8377;'+_f(netPay)+'</span></div>';
+  var foot='<button class="btn btnOut btn-sm" onclick="_mClose()">Close</button>';
+  if(role==='admin'&&st!=='Paid')foot+='<button class="btn btnG btn-sm" onclick="_mClose();_mRecordPayment(\''+_esc(invNo)+'\'"><i class="fa-solid fa-indian-rupee-sign"></i> Record Payment</button>';
+  _mOpen('Invoice Detail',body,foot);
 }
 function _waTest(){
   if(!_U){return;}
