@@ -1,6 +1,8 @@
+
+
 /* NM Press app.js v3.1 — Premium Mobile UI */
 'use strict';
-var GAS_URL='https://script.google.com/macros/s/AKfycbwyoea7hhlN3feL6ydKND1SoTDiNgsWhstImhV1jgw5c1o0YBoUYyLKODVkmmS1ATw1-g/exec';
+var GAS_URL='https://script.google.com/macros/s/AKfycbwyoea7hhlN3feL6ydKND1SoTDiNgsWhstImhV1jgw5c1o0YBoUYyLKODVkmmS1ATw1-g/execE';
 var LS_KEY='nm_press_v3';
 var _U=null,_TOKEN=null,_D={},_V='home',_cbIdx=0,_fabCb=null;
 var _jFilter='all',_jSearch='';
@@ -107,7 +109,7 @@ function _boot(){
   _elSet('sbName',_U.name||'--');
   _elSet('sbRole',_rl(_U.role));
   _elSet('tbRole',_rl(_U.role));
-  _buildNav();_showSkel();
+  _buildNav();_sbRestoreState();_showSkel();
   _api('getAllData',{},function(r){
     _D=r.data||{};_lv('home');
     if(!_gasOk())_toast('Demo mode — GAS URL update karo');
@@ -145,7 +147,9 @@ var NAV={
     {id:'downtime',ic:'fa-triangle-exclamation',lb:'Downtime Log'},
     {id:'plates',ic:'fa-layer-group',lb:'Plates'},
     {g:'Analytics'},{id:'reports',ic:'fa-chart-bar',lb:'Reports'},
-    {id:'staff',ic:'fa-id-badge',lb:'Staff'}],
+    {id:'joblog',ic:'fa-scroll',lb:'Job Log'},
+    {id:'staff',ic:'fa-id-badge',lb:'Staff'},
+    {id:'settings',ic:'fa-gear',lb:'Settings'}],
   supervisor:[{g:'Main'},{id:'home',ic:'fa-house',lb:'Dashboard'},
     {id:'jobs',ic:'fa-clipboard-list',lb:'All Jobs'},
     {id:'dispatch',ic:'fa-truck',lb:'Dispatch Queue'},
@@ -153,7 +157,8 @@ var NAV={
     {id:'downtime',ic:'fa-triangle-exclamation',lb:'Downtime Log'},
     {id:'machines',ic:'fa-gears',lb:'Machine Status'},
     {id:'stock',ic:'fa-boxes-stacked',lb:'Stock'},
-    {id:'expenses',ic:'fa-receipt',lb:'Expenses'}],
+    {id:'expenses',ic:'fa-receipt',lb:'Expenses'},
+    {id:'joblog',ic:'fa-scroll',lb:'Job Log'}],
   operator:[{g:'My Work'},{id:'home',ic:'fa-house',lb:'My Jobs'},
     {id:'history',ic:'fa-clock-rotate-left',lb:'History'},
     {g:'Report'},{id:'downtime',ic:'fa-triangle-exclamation',lb:'Problem'}],
@@ -190,7 +195,7 @@ function _buildNav(){
     sbEl.innerHTML=items.map(function(it){
       if(it.g)return '<div class="sb-grp">'+it.g+'</div>';
       var fn='_lv(\''+it.id+'\');_sbClose()';
-      return '<div class="sb-item" id="sni_'+it.id+'" onclick="'+fn+'"><i class="fa-solid '+it.ic+'"></i>'+it.lb+'</div>';
+      return '<div class="sb-item" id="sni_'+it.id+'" onclick="'+fn+'"><i class="fa-solid '+it.ic+'"></i><span class="sb-item-txt">'+it.lb+'</span><span class="sb-tooltip">'+it.lb+'</span></div>';
     }).join('');
   }
   if(bnEl){
@@ -208,15 +213,58 @@ function _setAct(v){
 }
 function _sbOpen(){_el('sb',function(e){e.classList.add('open');});_el('sbOv',function(e){e.classList.add('on');});}
 function _sbClose(){_el('sb',function(e){e.classList.remove('open');});_el('sbOv',function(e){e.classList.remove('on');});}
+var _sbCol=false;
+function _sbToggleCollapse(){
+  _sbCol=!_sbCol;
+  var sb=document.getElementById('sb');
+  if(sb)sb.classList.toggle('collapsed',_sbCol);
+  document.body.classList.toggle('sb-col',_sbCol);
+  try{localStorage.setItem('nm_sb_col',_sbCol?'1':'');}catch(e){}
+}
+function _sbRestoreState(){
+  try{var v=localStorage.getItem('nm_sb_col');if(v){_sbCol=true;var sb=document.getElementById('sb');if(sb)sb.classList.add('collapsed');document.body.classList.add('sb-col');}}catch(e){}
+}
 
 /* ── ROUTER ── */
+/* Role access map: which roles can see which views */
+var _ACCESS={
+  home:['admin','supervisor','operator','cutting','viewer'],
+  jobs:['admin','supervisor','operator','viewer'],
+  history:['admin','supervisor','operator','cutting','viewer'],
+  parties:['admin','supervisor','viewer'],
+  stock:['admin','supervisor'],
+  invoices:['admin','viewer'],
+  payments:['admin'],
+  expenses:['admin','supervisor'],
+  machines:['admin','supervisor'],
+  qc:['admin','supervisor'],
+  downtime:['admin','supervisor','operator','cutting'],
+  dispatch:['admin','supervisor'],
+  reports:['admin','supervisor','viewer'],
+  staff:['admin'],
+  plates:['admin','supervisor'],
+  settings:['admin'],
+  joblog:['admin','supervisor','viewer']
+};
+function _canView(v){
+  if(!_U)return false;
+  var allowed=_ACCESS[v];
+  if(!allowed)return true; // unknown views: allow
+  return allowed.indexOf(_U.role)>=0;
+}
 function _lv(v){
+  /* Access control */
+  if(!_canView(v)){
+    _toast('Access denied: '+_rl(_U?_U.role:'?')+' cannot view this');
+    return;
+  }
   _V=v;_setAct(v);_fabCb=null;
   _el('fab',function(e){e.classList.remove('on');});
   var titles={home:'Dashboard',jobs:'All Jobs',history:'History',parties:'Parties',
     stock:'Stock Register',invoices:'Invoices',payments:'Payments',expenses:'Expenses',
     machines:'Machines',qc:'Quality Control',downtime:'Downtime',
-    dispatch:'Dispatch Queue',reports:'Analytics',staff:'Staff',plates:'Plates'};
+    dispatch:'Dispatch Queue',reports:'Analytics',staff:'Staff',plates:'Plates',
+    settings:'Settings',joblog:'Job Log'};
   if(_U){
     if(_U.role==='operator'&&v==='home')titles.home='My Jobs';
     if(_U.role==='cutting'&&v==='home')titles.home='Cut Queue';
@@ -239,6 +287,8 @@ function _lv(v){
     else if(v==='reports')_vReports();
     else if(v==='staff')_vStaff();
     else if(v==='plates')_vPlates();
+    else if(v==='settings')_vSettings();
+    else if(v==='joblog')_vJobLog();
     else _vHome();
   }catch(err){
     console.error('View error ['+v+']',err);
@@ -1101,6 +1151,95 @@ function _tile(icon,color,bg,name,sub,fn,badge){
     +'<div class="qa-ico"><i class="fa-solid '+icon+'"></i></div>'
     +'<div class="qa-name">'+name+'</div>'
     +'<div class="qa-sub">'+sub+'</div></div>';
+}
+
+
+/* ════ SETTINGS VIEW ════════════════════ */
+function _vSettings(){
+  var role=_U?_U.role:'viewer';
+  var html='<div class="sec-head"><div class="sec-title">App Settings</div></div>';
+  /* GAS status */
+  html+='<div class="card"><div class="card-head"><div class="card-title"><i class="fa-solid fa-server"></i>Connection Status</div></div><div class="card-body">'
+    +(  _gasOk()
+      ? '<div class="alert ok" style="margin-bottom:0"><i class="fa-solid fa-circle-check"></i><div><b>GAS Connected</b><br><span style="font-size:11px;word-break:break-all">'+_e(GAS_URL)+'</span></div></div>'
+      : '<div class="alert warn" style="margin-bottom:0"><i class="fa-solid fa-triangle-exclamation"></i><div><b>Demo Mode</b> — GAS not connected<br><span style="font-size:12px">app.js line 3 mein GAS_URL replace karo</span></div></div>'
+    )+'</div></div>';
+  /* User info */
+  html+='<div class="card"><div class="card-head"><div class="card-title"><i class="fa-solid fa-user"></i>Logged In As</div></div><div class="card-body">'
+    +'<div class="info-row"><span class="ir-l">Name</span><span class="ir-v">'+_e(_U.name||'--')+'</span></div>'
+    +'<div class="info-row"><span class="ir-l">Email</span><span class="ir-v" style="font-size:12px">'+_e(_U.email||'--')+'</span></div>'
+    +'<div class="info-row"><span class="ir-l">Role</span><span class="ir-v"><span class="badge bb">'+_rl(_U.role)+'</span></span></div>'
+    +(  _U.machine
+      ? '<div class="info-row"><span class="ir-l">Machine</span><span class="ir-v">'+_e(_U.machine)+'</span></div>'
+      : ''
+    )+'</div></div>';
+  /* Demo users reference */
+  html+='<div class="card"><div class="card-head"><div class="card-title"><i class="fa-solid fa-users"></i>Demo Logins</div></div><div class="card-body">'
+    +'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Email</th><th>Password</th><th>Role</th></tr></thead><tbody>'
+    +'<tr><td>nitin@press.com</td><td>nitin@123</td><td><span class="badge br">Admin</span></td></tr>'
+    +'<tr><td>ravi@press.com</td><td>ravi@123</td><td><span class="badge bv">Supervisor</span></td></tr>'
+    +'<tr><td>m1@press.com</td><td>m1@123</td><td><span class="badge bb">Operator M1</span></td></tr>'
+    +'<tr><td>m2@press.com</td><td>m2@123</td><td><span class="badge bb">Operator M2</span></td></tr>'
+    +'<tr><td>m3@press.com</td><td>m3@123</td><td><span class="badge bb">Operator M3</span></td></tr>'
+    +'<tr><td>ramesh@press.com</td><td>ramesh@123</td><td><span class="badge bo">Cutting</span></td></tr>'
+    +'<tr><td>bauji@press.com</td><td>bauji@123</td><td><span class="badge bt">Viewer</span></td></tr>'
+    +'</tbody></table></div>'
+    +'<div style="margin-top:12px;font-size:12px;color:var(--tx3)">Master password (kisi bhi account pe): <b>nmpress@admin2026</b></div>'
+    +'</div></div>';
+  /* MAS info */
+  html+='<div class="card"><div class="card-head"><div class="card-title"><i class="fa-brands fa-whatsapp" style="color:#22C55E"></i>WhatsApp (MAS API)</div></div><div class="card-body">'
+    +'<div class="info-row"><span class="ir-l">Username</span><span class="ir-v" style="font-size:12px">nationalenterprises</span></div>'
+    +'<div class="info-row"><span class="ir-l">API Key</span><span class="ir-v" style="font-size:11px;word-break:break-all">1f6b2a4fa55d78a7...</span></div>'
+    +'<div style="margin-top:10px"><button class="wa-btn btn-sm" onclick="_waTest()"><i class="fa-brands fa-whatsapp"></i> Test WhatsApp</button></div>'
+    +'</div></div>';
+  /* Sign out */
+  html+='<div style="margin-top:8px"><button class="btn btnR btn-full" onclick="_signOut()"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</button></div>';
+  _html(html);
+}
+function _waTest(){
+  if(!_U){return;}
+  _toast('WhatsApp test message bheja...');
+  _wa(_U.whatsapp||'','Test message from NM Press app!','Test');
+}
+
+/* ════ JOB LOG VIEW ═════════════════════ */
+function _vJobLog(){
+  var jobs=(_D.jobs||[]).slice().reverse();
+  var html='<div class="search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="jlSrch" placeholder="Search job, party..." oninput="_jlRender(this.value)"></div>'
+    +'<div id="jlList"></div>';
+  _html(html);
+  function renderJL(q){
+    q=(q||'').toLowerCase();
+    var flt=jobs.filter(function(j){
+      return !q||(j['Job ID']||'').toLowerCase().indexOf(q)>=0
+        ||(j['Job Name / Description']||'').toLowerCase().indexOf(q)>=0
+        ||(j['Party Name']||'').toLowerCase().indexOf(q)>=0;
+    });
+    if(!flt.length){document.getElementById('jlList').innerHTML='<div class="empty"><i class="fa-solid fa-scroll"></i><h3>No jobs found</h3><p>Try different search terms</p></div>';return;}
+    var out='<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Job ID</th><th>Description</th><th>Party</th><th>Machine</th><th>Priority</th><th>Cut</th><th>Print</th><th>Dispatch</th><th>Status</th><th>Promised</th></tr></thead><tbody>';
+    flt.forEach(function(j){
+      var pri=j['Priority']||j['Priority (1-5)']||3;
+      var delayed=(j['Delay Flag']==='DELAYED'||j['Delay Flag (Formula)']==='DELAYED');
+      var jid2=_esc(j['Job ID']||'');
+      out+='<tr onclick="_mJobDetail(\''+jid2+'\')" style="cursor:pointer">'
+        +'<td><b>'+_e(j['Job ID']||'--')+'</b>'+(delayed?' <span style="color:#EA4335">&#9888;</span>':'')+'</td>'
+        +'<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_e(j['Job Name / Description']||'--')+'</td>'
+        +'<td>'+_e(j['Party Name']||'--')+'</td>'
+        +'<td>'+_e(j['Machine Assigned']||'--')+'</td>'
+        +'<td><span class="badge '+(pri==1?'br':pri==2?'bo':'bb')+'">P'+pri+'</span></td>'
+        +'<td><span class="badge '+_cBadge(j['Cut Status']||'Pending')+'">'+_e(j['Cut Status']||'Pending')+'</span></td>'
+        +'<td><span class="badge '+_pBadge(j['Print Status']||'Pending')+'">'+_e(j['Print Status']||'Pending')+'</span></td>'
+        +'<td><span class="badge '+(j['Dispatch Status']==='Done'?'bg':'bx')+'">'+_e(j['Dispatch Status']||'Pending')+'</span></td>'
+        +'<td>'+_stBadge(j['Job Status']||'Pending')+'</td>'
+        +'<td style="white-space:nowrap">'+_e(j['Promised Date']||'--')+'</td>'
+        +'</tr>';
+    });
+    out+='</tbody></table></div>';
+    out='<div class="sec-head" style="margin-bottom:8px"><div class="sec-title">'+flt.length+' jobs</div></div>'+out;
+    document.getElementById('jlList').innerHTML=out;
+  }
+  window._jlRender=renderJL;
+  renderJL('');
 }
 
 /* ════ UTILS ═════════════════════════════ */
